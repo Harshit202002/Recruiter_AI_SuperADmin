@@ -4,6 +4,7 @@ import session from 'express-session'
 import superAdminRoutes from "./routes/superAdmin.routes.js";
 import enquiryRoutes from "./routes/enquiry.routes.js";
 import companyRoutes from "./routes/company.routes.js"
+import subscriptionRoutes from "./routes/subscription.routes.js"
 
 const app = express()
 
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/enquiry", enquiryRoutes);
 app.use("/api/company", companyRoutes);
+app.use("/api/subscription", subscriptionRoutes);
 
 export default app;
 

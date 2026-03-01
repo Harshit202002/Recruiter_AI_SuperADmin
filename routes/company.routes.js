@@ -5,7 +5,7 @@ import upload from "../utils/multer.js";
 
 const router = express.Router();
 
-router.post("/register", protect,superAdminOnly, upload.single("logo"), CompanyController.register);
+router.post("/register",  upload.single("logo"), CompanyController.register);
 
 // Get all companies
 router.get("/", protect, superAdminOnly, CompanyController.getAll);

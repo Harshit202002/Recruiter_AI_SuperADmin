@@ -36,12 +36,11 @@ class CompanyController {
       } = req.body;
 
       let logoUrl = "";
-
-      // Upload logo if file exists
       if (req.file) {
         logoUrl = await uploadToCloudinary(req.file.buffer, "company_logos");
       }
 
+      // 1. Save company in SuperAdmin DB
       const company = new Company({
         companyName,
         email,
@@ -57,14 +56,57 @@ class CompanyController {
         state,
         logo: logoUrl
       });
-
       await company.save();
+
+      // 2. Call main backend API to create company DB, company, and admin user
+      const axios = (await import('axios')).default;
+      const mainBackendUrl = process.env.MAIN_BACKEND_URL || 'http://localhost:4000';
+      // Generate a random password for admin
+      const adminPassword = Math.random().toString(36).slice(-8) + '@A1';
+      // Save company in main backend
+      const mainCompanyPayload = {
+        externalCompanyId: company._id,
+        companyName,
+        email,
+        companyType,
+        gstNumber,
+        typeOfStaffing,
+        panNumber,
+        phoneNo,
+        numberOfEmployees,
+        address1,
+        address2,
+        city,
+        state,
+        logo: logoUrl,
+        admin: {
+          name: 'Admin',
+          email,
+          password: adminPassword
+        }
+      };
+      let mainCompanyRes;
+      try {
+        mainCompanyRes = await axios.post(`${mainBackendUrl}/api/company/register`, mainCompanyPayload);
+      } catch (err) {
+        // Rollback superadmin DB if needed
+        await Company.findByIdAndDelete(company._id);
+        return res.status(500).json({ error: 'Failed to create company in main backend', details: err?.response?.data || err.message });
+      }
+
+      // 3. Send admin credentials email
+      const sendEmail = (await import('../utils/sendEmail.js')).default;
+      await sendEmail({
+        to: email,
+        subject: 'Your Company Admin Account',
+        html: `<p>Your company has been registered.<br>Admin Email: <b>${email}</b><br>Password: <b>${adminPassword}</b><br>Please login and change your password.</p>`
+      });
 
       res.status(201).json({
         message: "Company registered successfully",
-        company
+        company,
+        mainCompany: mainCompanyRes.data
       });
-
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: error.message });
